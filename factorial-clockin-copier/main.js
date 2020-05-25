@@ -17,7 +17,7 @@
     })
       .then(response => response.json())
       .then(employees => {
-        const current = employees.find(x => x.is_complete);
+        const current = employees.find(x => !!x.bank_number);
         return fetch(
           `https://api.factorialhr.com/attendance/periods?year=${year}&month=${month}&employee_id=${current.id}`,
           {

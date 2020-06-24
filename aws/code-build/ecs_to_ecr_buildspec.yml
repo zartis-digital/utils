@@ -1,0 +1,25 @@
+version: 0.2
+
+# This buildspec of CodeBuild allows ECR to ECS CodePipeline
+# Source: ECR
+# Artifact: ECS Rolling Update (Fargate)
+# Requirements: $CONTAINER_NAME environment variable 
+# -> (As defined in the containerDefinition of the TaskDefinition of the ECS Service being updated.
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.7
+  build:
+    commands:
+      - echo $(cat imageDetail.json)
+      - REPOSITORY_URI=$(cat imageDetail.json | python -c "import sys, json; print(json.load(sys.stdin)['ImageURI'].split('@')[0])")
+      - IMAGE_TAG=$(cat imageDetail.json | python -c "import sys, json; print(json.load(sys.stdin)['ImageTags'][0])")
+      - echo $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Writing image definitions file...
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo $(cat imagedefinitions.json)
+artifacts:
+    files: imagedefinitions.json

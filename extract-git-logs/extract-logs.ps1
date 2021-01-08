@@ -20,9 +20,9 @@ while (!$gitAuthor) {
     $gitAuthor = Read-Host -Prompt "Please enter the author name for the git commits"
 }
 $semester = -1
-while ($semester -notin 0, 1, 2) {
-    $semester = Read-Host -Prompt "Please enter target semester of the report ( 0 = full year (just press enter), 1 = 1st semester, 2 = 2nd semester )"
-    if ($semester -eq -1) { $semester = 0}
+while ($semester -notin 0, 1, 2, 3) {
+    $semester = Read-Host -Prompt "Please enter target semester of the report ( 0 = full year (just press enter), 1 = 1st semester, 2 = 2nd semester, 3 - full previous year )"
+    if ($semester -eq -1) { $semester = 0 }
 }
 $currentYear = Get-Date -Format "yyyy"
 switch ($semester) {
@@ -33,6 +33,10 @@ switch ($semester) {
     2 { 
         $startDate = "{0}-06-01" -f $currentYear
         $endDate = "{0}-12-31" -f $currentYear
+    }
+    3 { 
+        $startDate = "{0}-01-01" -f $currentYear - 1
+        $endDate = "{0}-12-31" -f $currentYear - 1
     }
     Default {
         $startDate = "{0}-01-01" -f $currentYear

@@ -31,18 +31,20 @@ while (!$currentYear) {
 }
 switch ($semester) {
     1 {
-        $startDate = "{0}-01-01" -f $currentYear
-        $endDate = "{0}-05-30" -f $currentYear
+        $startDate = Get-Date -Year $currentYear -Month 1 -Day 1 -Hour 0 -Minute 0 -Second 0 -Format "yyyy-MM-ddTHH.mm:ssK"
+        $endDate = Get-Date -Year $currentYear -Month 6 -Day 30 -Hour 23 -Minute 59 -Second 59 -Format "yyyy-MM-ddTHH.mm:ssK"
     }
     2 {
-        $startDate = "{0}-06-01" -f $currentYear
-        $endDate = "{0}-12-31" -f $currentYear
+        $startDate = Get-Date -Year $currentYear -Month 07 -Day 1 -Hour 0 -Minute 0 -Second 0 -Format "yyyy-MM-ddTHH.mm:ssK"
+        $endDate = Get-Date -Year $currentYear -Month 12 -Day 31 -Hour 23 -Minute 59 -Second 59 -Format "yyyy-MM-ddTHH.mm:ssK"
     }
     Default {
-        $startDate = "{0}-01-01" -f $currentYear
-        $endDate = "{0}-12-31" -f $currentYear
+        $startDate = Get-Date -Year $currentYear -Month 1 -Day 1 -Hour 0 -Minute 0 -Second 0 -Format "yyyy-MM-ddTHH.mm:ssK"
+        $endDate = Get-Date -Year $currentYear -Month 12 -Day 31 -Hour 23 -Minute 59 -Second 59 -Format "yyyy-MM-ddTHH.mm:ssK"
     }
 }
+write-host "Searching logs from $startDate to $endDate"
+
 $semesterLabel = ""
 if ($semester -gt 0) {
     $semesterLabel = "-s{0}" -f $semester

@@ -1,6 +1,6 @@
 <#
 INSTRUCTIONS
-place this script in the container folder that contains all your git projects. 
+place this script in the container folder that contains all your git projects.
 it will extract any git log for git projects nested on that container, up to a depth level of 4 ( confirubale in the empty params)
 Getting the author name:
 - Check a gitlog of a repo, and search for your authorname
@@ -14,7 +14,7 @@ if ($IsMacOS -or $IsLinux) {
 }
 write-host "Using path delimiter = $pathDelimiter"
 $gitRelateFolder = "$PSScriptRoot\"
-$gitlogFolder = "zartis-logs" #Read-Host -Prompt "Please enter a name for the folder in which you want to save the git logs"
+$gitlogFolder = "zartis-logs"
 $gitAuthor = ""
 while (!$gitAuthor) {
     $gitAuthor = Read-Host -Prompt "Please enter the author name for the git commits"
@@ -30,19 +30,21 @@ while (!$currentYear) {
     if (!$currentYear) { $currentYear = Get-Date -Format "yyyy" }
 }
 switch ($semester) {
-    1 { 
-        $startDate = "{0}-01-01" -f $currentYear
-        $endDate = "{0}-05-30" -f $currentYear
+    1 {
+        $startDate = Get-Date -Year $currentYear -Month 1 -Day 1 -Hour 0 -Minute 0 -Second 0 -Format "yyyy-MM-ddTHH.mm:ssK"
+        $endDate = Get-Date -Year $currentYear -Month 6 -Day 30 -Hour 23 -Minute 59 -Second 59 -Format "yyyy-MM-ddTHH.mm:ssK"
     }
-    2 { 
-        $startDate = "{0}-06-01" -f $currentYear
-        $endDate = "{0}-12-31" -f $currentYear
+    2 {
+        $startDate = Get-Date -Year $currentYear -Month 07 -Day 1 -Hour 0 -Minute 0 -Second 0 -Format "yyyy-MM-ddTHH.mm:ssK"
+        $endDate = Get-Date -Year $currentYear -Month 12 -Day 31 -Hour 23 -Minute 59 -Second 59 -Format "yyyy-MM-ddTHH.mm:ssK"
     }
     Default {
-        $startDate = "{0}-01-01" -f $currentYear
-        $endDate = "{0}-12-31" -f $currentYear
+        $startDate = Get-Date -Year $currentYear -Month 1 -Day 1 -Hour 0 -Minute 0 -Second 0 -Format "yyyy-MM-ddTHH.mm:ssK"
+        $endDate = Get-Date -Year $currentYear -Month 12 -Day 31 -Hour 23 -Minute 59 -Second 59 -Format "yyyy-MM-ddTHH.mm:ssK"
     }
 }
+write-host "Searching logs from $startDate to $endDate"
+
 $semesterLabel = ""
 if ($semester -gt 0) {
     $semesterLabel = "-s{0}" -f $semester
@@ -80,6 +82,8 @@ Get-ChildItem -Recurse -Path $gitlogFolder | ForEach-Object {
         write-host "Empty log deleted '$($gitlog.FullName)'" -foregroundcolor darkyellow
     }
     else {
+        #add csv headers
+        "hash;author;date;message;diff`r`n" + (Get-Content $gitlog.FullName -Raw) | Set-Content $gitlog.FullName
         #cleanup format
         ((Get-Content -path $gitlog.FullName -Raw).Replace(";`r`n ", ";")) | Set-Content -Path $gitlog.FullName
         ((Get-Content -path $gitlog.FullName -Raw).Replace("`r`n`r`n", "`r`n")) | Set-Content -Path $gitlog.FullName

@@ -28,7 +28,7 @@ try {
         throw "Folder with repos: '$allProjectsFolder' cant be accesed" 
     }
 
-    Write-Host "`nLets extract all the git logs from any git project located under '$allProjectsFolder'" -ForegroundColor Green
+    Write-Host "`n=> Lets extract all the git logs from any git project located under '$allProjectsFolder'" -ForegroundColor Green
     if ($IsMacOS -or $IsLinux) {
         Write-Host "- Current host is UNIX based" -ForegroundColor Green
     }
@@ -95,7 +95,7 @@ try {
         $repoCurrentBranch = git branch --show-current *>&1
         write-host $trycheckout2 
         if ( "$trycheckout".indexOf( "error") -ge 0) {
-            write-host "`nThere are pending changes on current branch '$repoCurrentBranch' on '$gitrepoFolderPath' (repo '$gitrepoName').`nSome logs from branch '$targetBranch' may not be included. Please committing and merging to '$targetBranch'" -foregroundcolor DarkRed
+            write-host "`nThere are pending changes on current branch '$repoCurrentBranch' on '$gitrepoFolderPath' (repo '$gitrepoName').`nSome logs from branch '$targetBranch' may not be included. Consider committing and merging to '$targetBranch'" -foregroundcolor DarkRed
         }
         else {
             write-host "." -ForegroundColor DarkYellow -NoNewline
@@ -122,7 +122,7 @@ try {
         }
     }
     Set-Location -Path $PSScriptRoot -ErrorAction Stop > $null
-    write-host "=> All Logs can be found here: '$gitlogExtractOutputFolder'" -foregroundcolor green
+    write-host "=> All Logs can be found here: '$gitlogExtractOutputFolder'`n`n" -foregroundcolor green
 
 }
 catch {

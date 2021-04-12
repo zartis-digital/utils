@@ -1,0 +1,5 @@
+# ignore local version of running script 
+run-extract-logs.local.ps1
+
+# ignore temp folder
+temp

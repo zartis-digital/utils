@@ -89,12 +89,10 @@ try {
         $gitlogfilename = "{0}-{1}.csv" -f $gitrepoName, $($gitAuthor -replace " ", "")
         $trycheckout = git checkout $targetBranch *>&1
         if ( "$trycheckout".indexOf( "error") -ge 0) {
-            write-host "`nThere are pending changes on current branch on '$gitrepoFolderPath' (repo '$gitrepoName').`nPlease commit and merge to master, then try again" -foregroundcolor DarkRed
+            write-host "`nThere are pending changes on current branch on '$gitrepoFolderPath' (repo '$gitrepoName').`nSome logs from branch '$targetBranch' may not be included. Please committing and merging to '$targetBranch'" -foregroundcolor DarkRed
         }
-        else {
-            $gitLogFilepath = Join-Path -Path $gitlogExtractOutputFolder -childPath "/$gitlogfilename"
-            . { git log --author="$gitAuthor" --branches --pretty="format:%h;%an;%ad;%s;" --date=local --no-merges --shortstat --after="$startDate" --before "$endDate" > $gitLogFilepath }
-        }
+        $gitLogFilepath = Join-Path -Path $gitlogExtractOutputFolder -childPath "/$gitlogfilename"
+        . { git log --author="$gitAuthor" --branches --pretty="format:%h;%an;%ad;%s;" --date=local --no-merges --shortstat --after="$startDate" --before "$endDate" > $gitLogFilepath }
         write-host "." -ForegroundColor DarkYellow -NoNewline
     }
     write-host "`nLogs extracted" -ForegroundColor DarkYellow

@@ -24,6 +24,10 @@ try {
     $semesterLabel = "" # used for a better namind of the folder where the logs are going to be stored
     [string] $gitlogExtractOutputFolder = Join-Path -Path $PSScriptRoot -childPath "/temp/logs-for-zartis"   # OS-agnostic filepath creation, default output
 
+    if ($(Test-Path $allProjectsFolder -ErrorAction Stop) -eq $false) {
+        throw "Folder with repos: '$allProjectsFolder' cant be accesed" 
+    }
+
     Write-Host "`nLets extract all the git logs from any git project located under '$allProjectsFolder'" -ForegroundColor Green
     if ($IsMacOS -or $IsLinux) {
         Write-Host "- Current host is UNIX based" -ForegroundColor Green
@@ -88,12 +92,17 @@ try {
         Set-Location -Path $gitrepoFolderPath -ErrorAction Stop > $null
         $gitlogfilename = "{0}-{1}.csv" -f $gitrepoName, $($gitAuthor -replace " ", "")
         $trycheckout = git checkout $targetBranch *>&1
+        $repoCurrentBranch = git branch --show-current *>&1
+        write-host $trycheckout2 
         if ( "$trycheckout".indexOf( "error") -ge 0) {
-            write-host "`nThere are pending changes on current branch on '$gitrepoFolderPath' (repo '$gitrepoName').`nSome logs from branch '$targetBranch' may not be included. Please committing and merging to '$targetBranch'" -foregroundcolor DarkRed
+            write-host "`nThere are pending changes on current branch '$repoCurrentBranch' on '$gitrepoFolderPath' (repo '$gitrepoName').`nSome logs from branch '$targetBranch' may not be included. Please committing and merging to '$targetBranch'" -foregroundcolor DarkRed
+        }
+        else {
+            write-host "." -ForegroundColor DarkYellow -NoNewline
         }
         $gitLogFilepath = Join-Path -Path $gitlogExtractOutputFolder -childPath "/$gitlogfilename"
         . { git log --author="$gitAuthor" --branches --pretty="format:%h;%an;%ad;%s;" --date=local --no-merges --shortstat --after="$startDate" --before "$endDate" > $gitLogFilepath }
-        write-host "." -ForegroundColor DarkYellow -NoNewline
+        
     }
     write-host "`nLogs extracted" -ForegroundColor DarkYellow
     write-host "Logs cleanup ( remove empty ones )..." -ForegroundColor DarkYellow
@@ -117,7 +126,7 @@ try {
 
 }
 catch {
-    Write-Host "There was an error" -ForegroundColor Red
+    Write-Host "There was an error: $($_.FullyQualifiedErrorId)" -ForegroundColor Red
     $_
 }
 

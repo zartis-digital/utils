@@ -147,6 +147,15 @@
     const element = filledRowElement.querySelector("td:nth-child(2)");
     const el = document.createElement("button");
     el.innerText = "Copy on empty days";
+    Object.assign(el.style, {
+      backgroundColor: '#C673B3',
+      padding: '8px',
+      border: '1px solid #a91f8954',
+      'border-radius': '5px',
+      color: 'white',
+      'font-weight': 600,
+      width: '100%',
+    });
     element.appendChild(el);
     el.addEventListener("click", () => {
       if (empty.length) {

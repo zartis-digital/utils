@@ -36,7 +36,7 @@
     }
   ).then((response) => response.json());
 
-  const currentPeriod = periods.find((x) => x.state === "pending");
+  const currentPeriod = periods.find((x) => x.state === "in_progress");
 
   if (!currentPeriod)
     throw new Error(`Could't find all the information necessary to update the shifts for

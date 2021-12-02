@@ -1,55 +1,45 @@
-﻿using Google.Apis.Upload;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ZartisLogs
 {
     public partial class Main : Form
     {
-        AppSettingsModel AppSettingsModel { get; set; }
+        private readonly GoogleDriveUploaderService _googleDriveUploaderService;
+        private AppSettingsModel _appSettingsModel;
 
-        public Main()
+        public Main(GoogleDriveUploaderService googleDriveUploaderService, AppSettingsModel appSettingsModel)
         {
+            _googleDriveUploaderService = googleDriveUploaderService;
+            _appSettingsModel = appSettingsModel;
             InitializeComponent();
         }
 
         private void Main_Load(object sender, EventArgs e)
         {
             try
-            {
-                initializeConfiguration();
+            {                
                 setInitialValues();
                 setLatestsValues();
             }
             catch (Exception ex) { MessageBox.Show("Main_Load - " + ex.Message); }
         }
 
-        private void rb_DateRange_CheckedChanged(object sender, EventArgs e) => setStep2DateSetVisibility(false, false, true);
+        private void rb_DateRange_CheckedChanged(object sender, EventArgs e) => setStep2DateSetVisibility(rb_DateUpToNow.Checked, rb_SingleMonth.Checked, rb_DateRange.Checked);
 
-        private void rb_SingleMonth_CheckedChanged(object sender, EventArgs e) => setStep2DateSetVisibility(false, true, false);
+        private void rb_SingleMonth_CheckedChanged(object sender, EventArgs e) => setStep2DateSetVisibility(rb_DateUpToNow.Checked, rb_SingleMonth.Checked, rb_DateRange.Checked);
 
-        private void rb_DateUpToNow_CheckedChanged(object sender, EventArgs e) => setStep2DateSetVisibility(true, false, false);
+        private void rb_DateUpToNow_CheckedChanged(object sender, EventArgs e) => setStep2DateSetVisibility(rb_DateUpToNow.Checked, rb_SingleMonth.Checked, rb_DateRange.Checked);
 
-        private void dtpDateFrom_ValueChanged(object sender, EventArgs e)
-        {
-            if (rb_DateRange.Checked)
-                setStep2DateSetVisibility(false, false, true);
-            else if (rb_SingleMonth.Checked)
-                setStep2DateSetVisibility(false, true, false);
-            else if (rb_DateUpToNow.Checked)
-                setStep2DateSetVisibility(true, false, false);
-        }
+        private void dtpDateFrom_ValueChanged(object sender, EventArgs e) => setStep2DateSetVisibility(rb_DateUpToNow.Checked, rb_SingleMonth.Checked, rb_DateRange.Checked);
 
         private void btnSearchProjectFilePath_Click(object sender, EventArgs e)
         {
@@ -67,13 +57,15 @@ namespace ZartisLogs
             {
                 btnAddProjectFilePath_Click_Validate();
 
+                var _lbAddedProjectFilePaths = lbAddedProjectFilePaths.Items.Cast<(string parentPath, string projectPath, string projectName)>();
+
                 if (chkRecursiveSearch.Checked)
                 {
                     asyncTaskIsRunning(true);
-                    var workerParam = (lbAddedProjectFilePaths.Items.Cast<(string parentPath, string projectPath, string projectName)>().ToList(), txtProjectFilePath.Text);
+                    var workerParam = (_lbAddedProjectFilePaths.ToList(), txtProjectFilePath.Text);
                     bgw_AddedProjectFilePaths.RunWorkerAsync(workerParam);
                 }
-                else if (!lbAddedProjectFilePaths.Items.Cast<(string parentPath, string projectPath, string projectName)>().Any(x => x.projectPath == txtProjectFilePath.Text))
+                else if (!_lbAddedProjectFilePaths.Any(x => x.projectPath == txtProjectFilePath.Text))
                 {
                     var newItem = (parentPath: Directory.GetParent(txtProjectFilePath.Text).FullName, projectPath: txtProjectFilePath.Text, projectName: new DirectoryInfo(txtProjectFilePath.Text).Name);
                     lbAddedProjectFilePaths.Items.Add(newItem);
@@ -89,59 +81,50 @@ namespace ZartisLogs
 
         private void bgw_AddedProjectFilePaths_DoWork(object sender, DoWorkEventArgs e)
         {
-            bgw_AddedProjectFilePaths.ReportProgress(1);
+            bgw_AddedProjectFilePaths.ReportProgress(0);
+
+            bgw_AddedProjectFilePaths.ReportProgress(1, "bgw_AddedProjectFilePaths_DoWork - Parsing Argument");
             var (listOfAvailableProjectFilePaths, projectFilePath) = ((List<(string parentPath, string projectPath, string projectName)> listOfAvailableProjectFilePaths, string projectFilePath))e.Argument;
 
-            bgw_AddedProjectFilePaths.ReportProgress(2);
+            bgw_AddedProjectFilePaths.ReportProgress(2, "Searching folders with *.SLN extension");
             var _getProjectsByExtensionsAsync = getProjectsByExtensions(listOfAvailableProjectFilePaths, projectFilePath, "*.sln");
 
-            bgw_AddedProjectFilePaths.ReportProgress(3);
+            bgw_AddedProjectFilePaths.ReportProgress(3, "Searching folders with *.SLN extension Job Done");
             listOfAvailableProjectFilePaths.AddRange(_getProjectsByExtensionsAsync);
 
-            bgw_AddedProjectFilePaths.ReportProgress(4);
+            bgw_AddedProjectFilePaths.ReportProgress(4, "Searching folders with *.gitignore extension");
             var __getProjectsByExtensionsAsync = getProjectsByExtensions(listOfAvailableProjectFilePaths, projectFilePath, "*.gitignore");
 
-            bgw_AddedProjectFilePaths.ReportProgress(5);
+            bgw_AddedProjectFilePaths.ReportProgress(5, "Searching folders with *.gitignore extension Job Done");
             listOfAvailableProjectFilePaths.AddRange(__getProjectsByExtensionsAsync);
 
             bgw_AddedProjectFilePaths.ReportProgress(100);
             e.Result = listOfAvailableProjectFilePaths;
         }
 
-        private void bgw_AddedProjectFilePaths_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void bgw_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
+            if (e.ProgressPercentage == 0)
+                txt_ConsoleLog.AppendText("*******************Starting Job*******************");
+
             txt_ConsoleLog.AppendText(Environment.NewLine);
 
-            switch (e.ProgressPercentage)
-            {
-                case 1:
-                    txt_ConsoleLog.AppendText("bgw_AddedProjectFilePaths_DoWork - Parsing Argument");
-                    break;
-                case 2:
-                    txt_ConsoleLog.AppendText("Searching *.SLN folders");
-                    break;
-                case 3:
-                    txt_ConsoleLog.AppendText("Searching *.SLN folders Job Done");
-                    break;
-                case 4:
-                    txt_ConsoleLog.AppendText("Searching *.gitignore folders");
-                    break;
-                case 5:
-                    txt_ConsoleLog.AppendText("Searching *.gitignore folders Job Done");
-                    break;
-                case 100:
-                    txt_ConsoleLog.AppendText("Available Project Paths Job Done");
-                    break;
-            }
+            if (e.UserState != null)
+                txt_ConsoleLog.AppendText(e.UserState.ToString());
+
+            if (e.ProgressPercentage == 100)
+                txt_ConsoleLog.AppendText("*******************Job Done*******************");
         }
 
         private void bgw_AddedProjectFilePaths_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             try
             {
+                var bgw_AddedProjectFilePaths_DoWork_Result = (List<(string parentPath, string projectPath, string projectName)>)e.Result;
+
                 lbAddedProjectFilePaths.Items.Clear();
 
-                foreach (var (parentPath, projectPath, projectName) in (List<(string parentPath, string projectPath, string projectName)>)e.Result)
+                foreach (var (parentPath, projectPath, projectName) in bgw_AddedProjectFilePaths_DoWork_Result)
                     lbAddedProjectFilePaths.Items.Add((parentPath, projectPath, projectName));
 
                 if (e.Error != null)
@@ -161,16 +144,13 @@ namespace ZartisLogs
             catch (Exception ex) { MessageBox.Show(ex.Message); }
         }
 
-        private void rb_SingleFileByProject_CheckedChanged(object sender, EventArgs e) => setStep6GeneratedFileNamePattern(true, false, false);
+        private void rb_SingleFileByProject_CheckedChanged(object sender, EventArgs e) => setStep6GeneratedFileNamePattern(rb_SingleFileByProject.Checked, rb_SingleFileByMonthAndYear.Checked, rb_GroupByProjectAndMonth.Checked);
 
-        private void rb_SingleFileByMonthAndYear_CheckedChanged(object sender, EventArgs e) => setStep6GeneratedFileNamePattern(false, true, false);
+        private void rb_SingleFileByMonthAndYear_CheckedChanged(object sender, EventArgs e) => setStep6GeneratedFileNamePattern(rb_SingleFileByProject.Checked, rb_SingleFileByMonthAndYear.Checked, rb_GroupByProjectAndMonth.Checked);
 
-        private void rb_GroupByProjectAndMonth_CheckedChanged(object sender, EventArgs e) => setStep6GeneratedFileNamePattern(false, false, true);
+        private void rb_GroupByProjectAndMonth_CheckedChanged(object sender, EventArgs e) => setStep6GeneratedFileNamePattern(rb_SingleFileByProject.Checked, rb_SingleFileByMonthAndYear.Checked, rb_GroupByProjectAndMonth.Checked);
 
-        private void chkTryToUpload_CheckedChanged(object sender, EventArgs e)
-        {
-            txt_DriveFolderName.Enabled = chkTryToUpload.Checked;
-        }
+        private void chkTryToUpload_CheckedChanged(object sender, EventArgs e) => txt_DriveFolderName.Enabled = chkTryToUpload.Checked;
 
         private void btnGenerate_Click(object sender, EventArgs e)
         {
@@ -196,7 +176,9 @@ namespace ZartisLogs
 
         private void bgw_RunGitCommand_DoWork(object sender, DoWorkEventArgs e)
         {
-            bgw_RunGitCommand.ReportProgress(1);
+            bgw_RunGitCommand.ReportProgress(0);
+
+            bgw_RunGitCommand.ReportProgress(1, "bgw_RunGitCommand_DoWork - Parsing Argument");
             var bgw_RunGitCommand_Argument = ((List<(string parentPath, string projectPath, string projectName)>, DateTime dateFrom, DateTime dateTo, string username, ExecutionType executionType, string prettierFormat))e.Argument;
 
             var result = new List<(string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo)>();
@@ -209,54 +191,25 @@ namespace ZartisLogs
                 case ExecutionType.rb_SingleMonth_rb_GroupByProjectAndMonth:
                 case ExecutionType.rb_DateUpToNow_rb_SingleFileByMonthAndYear:
                 case ExecutionType.rb_DateUpToNow_rb_GroupByProjectAndMonth:
-                    bgw_RunGitCommand.ReportProgress(2);
+                    bgw_RunGitCommand.ReportProgress(2, "For Each ProjectName/Project Path + Months");
                     foreach (var item in bgw_RunGitCommand_Argument.Item1.GroupBy(x => new { x.projectName, x.projectPath }).Select(y => new { y.Key.projectName, y.Key.projectPath }))
                         foreach (var (Month, Year) in getMonthsBetween(bgw_RunGitCommand_Argument.dateFrom, bgw_RunGitCommand_Argument.dateTo))
                         {
-                            bgw_RunGitCommand.ReportProgress(3);
-                            using PowerShell powershell = PowerShell.Create();
-
-                            powershell.AddScript($"cd {item.projectPath}");
-
                             var newDateFrom = new DateTime(Year, Month, 1);
                             var newDateTo = new DateTime(Year, Month, DateTime.DaysInMonth(Year, Month));
 
-                            bgw_RunGitCommand.ReportProgress(4);
-                            var (gitCommand, tempFileName, projectName, dateFrom, dateTo) = buildGitCommand(newDateFrom, newDateTo, bgw_RunGitCommand_Argument.username, item.projectName, bgw_RunGitCommand_Argument.prettierFormat);
+                            var resultItem = _bgw_RunGitCommand_DoWork(bgw_RunGitCommand, item.projectPath, newDateFrom, newDateTo, bgw_RunGitCommand_Argument.username, item.projectName, bgw_RunGitCommand_Argument.prettierFormat);
 
-                            bgw_RunGitCommand.ReportProgress(5, gitCommand);
-                            powershell.AddScript(gitCommand);
-
-                            bgw_RunGitCommand.ReportProgress(6);
-                            powershell.Invoke();
-
-                            var resultItem = (tempFileName, item.projectName, dateFrom, dateTo);
-                            bgw_RunGitCommand.ReportProgress(7, resultItem);
                             result.Add(resultItem);
                         }
                     break;
                 case ExecutionType.rb_SingleMonth_rb_SingleFileByProject:
                 case ExecutionType.rb_DateRange_rb_SingleFileByProject:
                 case ExecutionType.rb_DateUpToNow_rb_SingleFileByProject:
-                    bgw_RunGitCommand.ReportProgress(2);
+                    bgw_RunGitCommand.ReportProgress(2, "For Each ProjectName/Project Path");
                     foreach (var item in bgw_RunGitCommand_Argument.Item1.GroupBy(x => new { x.projectName, x.projectPath }).Select(y => new { y.Key.projectName, y.Key.projectPath }))
                     {
-                        bgw_RunGitCommand.ReportProgress(3);
-                        using PowerShell powershell = PowerShell.Create();
-
-                        powershell.AddScript($"cd {item.projectPath}");
-
-                        bgw_RunGitCommand.ReportProgress(4);
-                        var (gitCommand, tempFileName, projectName, dateFrom, dateTo) = buildGitCommand(bgw_RunGitCommand_Argument.dateFrom, bgw_RunGitCommand_Argument.dateTo, bgw_RunGitCommand_Argument.username, item.projectName, bgw_RunGitCommand_Argument.prettierFormat);
-
-                        bgw_RunGitCommand.ReportProgress(5, gitCommand);
-                        powershell.AddScript(gitCommand);
-
-                        bgw_RunGitCommand.ReportProgress(6);
-                        powershell.Invoke();
-
-                        var resultItem = (tempFileName, item.projectName, dateFrom, dateTo);
-                        bgw_RunGitCommand.ReportProgress(7, resultItem);
+                        var resultItem = _bgw_RunGitCommand_DoWork(bgw_RunGitCommand, item.projectPath, bgw_RunGitCommand_Argument.dateFrom, bgw_RunGitCommand_Argument.dateTo, bgw_RunGitCommand_Argument.username, item.projectName, bgw_RunGitCommand_Argument.prettierFormat);
                         result.Add(resultItem);
                     }
                     break;
@@ -266,40 +219,6 @@ namespace ZartisLogs
             e.Result = result;
         }
 
-        private void bgw_RunGitCommand_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            txt_ConsoleLog.AppendText(Environment.NewLine);
-
-            switch (e.ProgressPercentage)
-            {
-                case 1:
-                    txt_ConsoleLog.AppendText("bgw_RunGitCommand_DoWork - Parsing Argument");
-                    break;
-                case 2:
-                    txt_ConsoleLog.AppendText("For Each ProjectName/Project Path");
-                    break;
-                case 3:
-                    txt_ConsoleLog.AppendText("Creating PS Console");
-                    break;
-                case 4:
-                    txt_ConsoleLog.AppendText("Building Git Command");
-                    break;
-                case 5:
-                    txt_ConsoleLog.AppendText("Adding Script to PS Console." + "Git Command:" + e.UserState);
-                    break;
-                case 6:
-                    txt_ConsoleLog.AppendText("Executing Script");
-                    break;
-                case 7:
-                    var (tempFileName, projectName, dateFrom, dateTo) = ((string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo))e.UserState;
-                    txt_ConsoleLog.AppendText("Getting Results." + "tempFileName:" + tempFileName + ".projectName:" + projectName + ".dateFrom:" + dateFrom.Date.ToString() + ".dateTo:" + dateTo.Date.ToString());
-                    break;
-                case 100:
-                    txt_ConsoleLog.AppendText("Retrieve Git Logs Job Done!!!");
-                    break;
-            }
-        }
-
         private void bgw_RunGitCommand_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             try
@@ -307,8 +226,6 @@ namespace ZartisLogs
                 var bgw_RunGitCommand_DoWork_Result = (List<(string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo)>)e.Result;
 
                 bgw_BuildOutputFile.RunWorkerAsync((bgw_RunGitCommand_DoWork_Result, getExecutionType(), txtFileNamePattern.Text, txt_UserName.Text, fbdGenerateBeautifulFile.SelectedPath));
-
-
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
             finally
@@ -323,7 +240,9 @@ namespace ZartisLogs
 
         private void bgw_BuildOutputFile_DoWork(object sender, DoWorkEventArgs e)
         {
-            bgw_BuildOutputFile.ReportProgress(1);
+            bgw_BuildOutputFile.ReportProgress(0);
+
+            bgw_BuildOutputFile.ReportProgress(1, "bgw_BuildOutputFile_DoWork - Parsing Argument");
             var bgw_BuildOutputFile_Argument = ((List<(string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo)>, ExecutionType executionType, string fileNamePattern, string userName, string saveSelectedPath))e.Argument;
 
             var result = new List<(string filePath, string fileName)>();
@@ -337,7 +256,7 @@ namespace ZartisLogs
                     {
                         var _item = bgw_BuildOutputFile_Argument.Item1.Where(x => x.projectName == item.Key);
 
-                        bgw_BuildOutputFile.ReportProgress(2);
+                        bgw_BuildOutputFile.ReportProgress(2, "Building Output file Name");
                         var _outputFileName = buildOutputFileName(
                                     bgw_BuildOutputFile_Argument.fileNamePattern,
                                     bgw_BuildOutputFile_Argument.userName,
@@ -346,7 +265,7 @@ namespace ZartisLogs
                                     int.MinValue,
                                     item.Key);
 
-                        bgw_BuildOutputFile.ReportProgress(3);
+                        bgw_BuildOutputFile.ReportProgress(3, "Writting final file");
                         buildOutputFile(_item.Select(x => x.tempFileName),
                             _outputFileName.filePath);
 
@@ -361,7 +280,7 @@ namespace ZartisLogs
                     {
                         var _item = bgw_BuildOutputFile_Argument.Item1.Where(x => x.dateTo == item.Key);
 
-                        bgw_BuildOutputFile.ReportProgress(2);
+                        bgw_BuildOutputFile.ReportProgress(2, "Building Output file Name");
                         var _outputFileName = buildOutputFileName(
                                     bgw_BuildOutputFile_Argument.fileNamePattern,
                                     bgw_BuildOutputFile_Argument.userName,
@@ -369,7 +288,7 @@ namespace ZartisLogs
                                     item.Key.Month,
                                     item.Key.Year);
 
-                        bgw_BuildOutputFile.ReportProgress(3);
+                        bgw_BuildOutputFile.ReportProgress(3, "Writting final file");
                         buildOutputFile(_item.Select(x => x.tempFileName),
                             _outputFileName.filePath);
 
@@ -382,9 +301,9 @@ namespace ZartisLogs
                     foreach (var _item in bgw_BuildOutputFile_Argument.Item1.GroupBy(x => x.projectName))
                         foreach (var item in bgw_BuildOutputFile_Argument.Item1.GroupBy(x => x.dateTo))
                         {
-                            var __item = bgw_BuildOutputFile_Argument.Item1.SingleOrDefault(x => x.projectName == _item.Key && x.dateTo == item.Key);
+                            var (tempFileName, projectName, dateFrom, dateTo) = bgw_BuildOutputFile_Argument.Item1.SingleOrDefault(x => x.projectName == _item.Key && x.dateTo == item.Key);
 
-                            bgw_BuildOutputFile.ReportProgress(2);
+                            bgw_BuildOutputFile.ReportProgress(2, "Building Output file Name");
                             var _outputFileName = buildOutputFileName(
                                     bgw_BuildOutputFile_Argument.fileNamePattern,
                                     bgw_BuildOutputFile_Argument.userName,
@@ -393,9 +312,9 @@ namespace ZartisLogs
                                     item.Key.Year,
                                     _item.Key);
 
-                            bgw_BuildOutputFile.ReportProgress(3);
+                            bgw_BuildOutputFile.ReportProgress(3, "Writting final file");
                             buildOutputFile(
-                                new List<string> { __item.tempFileName },
+                                new List<string> { tempFileName },
                                _outputFileName.filePath);
 
                             result.Add(_outputFileName);
@@ -405,27 +324,6 @@ namespace ZartisLogs
             e.Result = result;
 
             bgw_BuildOutputFile.ReportProgress(100);
-        }
-
-        private void bgw_BuildOutputFile_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            txt_ConsoleLog.AppendText(Environment.NewLine);
-
-            switch (e.ProgressPercentage)
-            {
-                case 1:
-                    txt_ConsoleLog.AppendText("bgw_BuildOutputFile_DoWork - Parsing Argument");
-                    break;
-                case 2:
-                    txt_ConsoleLog.AppendText("Building Output file Name");
-                    break;
-                case 3:
-                    txt_ConsoleLog.AppendText("Writting final file");
-                    break;
-                case 100:
-                    txt_ConsoleLog.AppendText("Creating Final Files Job Done");
-                    break;
-            }
         }
 
         private void bgw_BuildOutputFile_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -456,49 +354,25 @@ namespace ZartisLogs
 
         private void bgw_UploadToDrive_DoWork(object sender, DoWorkEventArgs e)
         {
-            bgw_UploadToDrive.ReportProgress(1);
-            var bgw_UploadToDrive_Argument = ((List<(string filePath, string fileName)>, string driveFolderName))e.Argument;
+            bgw_UploadToDrive.ReportProgress(0);
 
-            var _googleDriveUploaderService = new GoogleDriveUploaderService();
+            bgw_UploadToDrive.ReportProgress(1, "bgw_UploadToDrive - Parsing Argument");
+            var bgw_UploadToDrive_Argument = ((List<(string filePath, string fileName)>, string driveFolderName))e.Argument;       
 
-            bgw_UploadToDrive.ReportProgress(2);                        
-            e.Result = _googleDriveUploaderService.UploadFiles(bgw_UploadToDrive_Argument.Item1, bgw_UploadToDrive_Argument.driveFolderName);
+            bgw_UploadToDrive.ReportProgress(2, "Uploading Files...");
+            foreach (var (filePath, fileName) in bgw_UploadToDrive_Argument.Item1)
+            {
+                bgw_UploadToDrive.ReportProgress(3, $"Uploading File {fileName}");
+                var partialUploadResult = _googleDriveUploaderService.UploadFile(filePath, fileName, bgw_UploadToDrive_Argument.driveFolderName);
+                bgw_UploadToDrive.ReportProgress(4, $"Status: {partialUploadResult.uploadProgress.Status} - File {fileName}");
+            }
 
             bgw_UploadToDrive.ReportProgress(100);
         }
 
-        private void bgw_UploadToDrive_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            txt_ConsoleLog.AppendText(Environment.NewLine);
-
-            switch (e.ProgressPercentage)
-            {
-                case 1:
-                    txt_ConsoleLog.AppendText("bgw_UploadToDrive - Parsing Argument");
-                    break;
-                case 2:
-                    txt_ConsoleLog.AppendText("Uploading Files...");
-                    break;
-                case 100:
-                    txt_ConsoleLog.AppendText("Upload Complete");
-                    break;
-            }
-        }
-
         private void bgw_UploadToDrive_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            try
-            {
-                var bgw_UploadToDrive_DoWork_Result = (List<(IUploadProgress uploadProgress, string fileName)>)e.Result;
-
-                foreach (var (uploadProgress, fileName) in bgw_UploadToDrive_DoWork_Result)
-                {
-                    txt_ConsoleLog.AppendText(Environment.NewLine);
-                    txt_ConsoleLog.AppendText(uploadProgress.Status + "-" + fileName);
-                }
-
-                updateAppSettings();
-            }
+            try { updateAppSettings(); }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
             finally
             {
@@ -519,78 +393,20 @@ namespace ZartisLogs
             cbo_PrettierFormat.SelectedItem = "email";
         }
 
-        private void initializeConfiguration()
-        {
-            try
-            {
-                var builder = new ConfigurationBuilder()
-                                               .SetBasePath(Directory.GetCurrentDirectory())
-                                               .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-                var configuration = builder.Build();
-
-                AppSettingsModel = configuration.Get<AppSettingsModel>();
-
-                if (AppSettingsModel.ProjectFilePaths != null)
-                    AppSettingsModel.ProjectFilePaths.ToList().RemoveAll(x => !Directory.Exists(x.projectPath) || string.IsNullOrEmpty(x.projectPath));
-
-            }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is InvalidCastException)
-            {
-                try
-                {
-                    setDefaultConfiguration();
-                    initializeConfiguration();
-                }
-                catch (Exception) { throw; }
-            }
-            catch (Exception) { throw; }
-        }
-
-        private void setDefaultConfiguration()
-        {
-            AppSettingsModel = new AppSettingsModel
-            {
-                UserName = null,
-
-                Step1DateSelectionType = 1,
-
-                LastDateFromUsed = DateTime.UtcNow.AddDays(-1).Date,
-                LastDateToUsed = DateTime.UtcNow.Date,
-
-                ProjectFolderPath = null,
-
-                ProjectFilePaths = new List<ProjectFilePath>().ToArray(),
-
-                Step5GroupByType = 1,
-
-                Step6FileNamePattern = "E.T {UserName} - {ProjectName}.txt",
-                PrettierFormat = "email",
-
-                TryToUpload = false,
-                DriveFolderName = null,
-
-                SaveFilePath = null
-            };
-
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "appSettings.json");
-            var output = Newtonsoft.Json.JsonConvert.SerializeObject(AppSettingsModel, Newtonsoft.Json.Formatting.Indented);
-            File.WriteAllText(filePath, output);
-        }
         private void setLatestsValues()
         {
-            if (!string.IsNullOrEmpty(AppSettingsModel.UserName))
-                txt_UserName.Text = AppSettingsModel.UserName;
+            if (!string.IsNullOrEmpty(_appSettingsModel.UserName))
+                txt_UserName.Text = _appSettingsModel.UserName;
 
-            if (DateTime.TryParse(AppSettingsModel.LastDateFromUsed.ToString(), out var _LastDateFromUsed))
+            if (DateTime.TryParse(_appSettingsModel.LastDateFromUsed.ToString(), out var _LastDateFromUsed))
                 if (_LastDateFromUsed != DateTime.MinValue)
                     dtpDateFrom.Value = _LastDateFromUsed.Date;
 
-            if (DateTime.TryParse(AppSettingsModel.LastDateToUsed.ToString(), out var _LastDateToUsed))
+            if (DateTime.TryParse(_appSettingsModel.LastDateToUsed.ToString(), out var _LastDateToUsed))
                 if (_LastDateToUsed != DateTime.MinValue)
                     dtpDateTo.Value = _LastDateToUsed.Date;
 
-            switch (AppSettingsModel.Step1DateSelectionType)
+            switch (_appSettingsModel.Step1DateSelectionType)
             {
                 case 1:
                     rb_DateRange.Checked = true;
@@ -603,19 +419,19 @@ namespace ZartisLogs
                     break;
             }
 
-            if (!string.IsNullOrEmpty(AppSettingsModel.ProjectFolderPath) && Directory.Exists(AppSettingsModel.ProjectFolderPath))
-                fbdSearchProjectFilePath.SelectedPath = AppSettingsModel.ProjectFolderPath;
+            if (!string.IsNullOrEmpty(_appSettingsModel.ProjectFolderPath) && Directory.Exists(_appSettingsModel.ProjectFolderPath))
+                fbdSearchProjectFilePath.SelectedPath = _appSettingsModel.ProjectFolderPath;
             else
                 fbdSearchProjectFilePath.SelectedPath = null;
 
-            if (AppSettingsModel.ProjectFilePaths != null && AppSettingsModel.ProjectFilePaths.Count() > 0)
-                foreach (var item in AppSettingsModel.ProjectFilePaths.Where(x => Directory.Exists(x.projectPath)))
+            if (_appSettingsModel.ProjectFilePaths != null && _appSettingsModel.ProjectFilePaths.Length > 0)
+                foreach (var item in _appSettingsModel.ProjectFilePaths.Where(x => Directory.Exists(x.projectPath)))
                 {
                     var newItem = (item.parentPath, item.projectPath, item.projectName);
                     lbAddedProjectFilePaths.Items.Add(newItem);
                 }
 
-            switch (AppSettingsModel.Step5GroupByType)
+            switch (_appSettingsModel.Step5GroupByType)
             {
                 case 1:
                     rb_SingleFileByProject.Checked = true;
@@ -628,16 +444,16 @@ namespace ZartisLogs
                     break;
             }
 
-            if (!string.IsNullOrEmpty(AppSettingsModel.Step6FileNamePattern))
-                txtFileNamePattern.Text = AppSettingsModel.Step6FileNamePattern;
+            if (!string.IsNullOrEmpty(_appSettingsModel.Step6FileNamePattern))
+                txtFileNamePattern.Text = _appSettingsModel.Step6FileNamePattern;
 
-            chkTryToUpload.Checked = AppSettingsModel.TryToUpload;
+            chkTryToUpload.Checked = _appSettingsModel.TryToUpload;
 
-            if (!string.IsNullOrEmpty(AppSettingsModel.DriveFolderName))
-                txt_DriveFolderName.Text = AppSettingsModel.DriveFolderName;
+            if (!string.IsNullOrEmpty(_appSettingsModel.DriveFolderName))
+                txt_DriveFolderName.Text = _appSettingsModel.DriveFolderName;
 
-            if (!string.IsNullOrEmpty(AppSettingsModel.SaveFilePath) && Directory.Exists(AppSettingsModel.SaveFilePath))
-                fbdGenerateBeautifulFile.SelectedPath = AppSettingsModel.SaveFilePath;
+            if (!string.IsNullOrEmpty(_appSettingsModel.SaveFilePath) && Directory.Exists(_appSettingsModel.SaveFilePath))
+                fbdGenerateBeautifulFile.SelectedPath = _appSettingsModel.SaveFilePath;
             else
                 fbdGenerateBeautifulFile.SelectedPath = null;
         }
@@ -785,6 +601,28 @@ namespace ZartisLogs
             return (gitCommand, tempFileName, projectName, dateFrom, dateTo);
         }
 
+        private (string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo) _bgw_RunGitCommand_DoWork(BackgroundWorker _bgw_RunGitCommand, string projectPath, DateTime dateFrom, DateTime dateTo, string username, string projectName, string prettierFormat)
+        {
+            _bgw_RunGitCommand.ReportProgress(3, "Creating PS Console");
+            using PowerShell powershell = PowerShell.Create();
+
+            _bgw_RunGitCommand.ReportProgress(4, $"Adding Script for Project Path: {projectPath}");
+            powershell.AddScript($"cd {projectPath}");
+
+            _bgw_RunGitCommand.ReportProgress(5, "Building Git Command");
+            var (gitCommand, tempFileName, _projectName, _dateFrom, _dateTo) = buildGitCommand(dateFrom, dateTo, username, projectName, prettierFormat);
+
+            _bgw_RunGitCommand.ReportProgress(6, $"Adding Script to PS Console. Git Command:{ gitCommand}");
+            powershell.AddScript(gitCommand);
+
+            _bgw_RunGitCommand.ReportProgress(7, "Executing Script");
+            powershell.Invoke();
+
+            var resultItem = (tempFileName, projectName, dateFrom, dateTo);
+            _bgw_RunGitCommand.ReportProgress(8, "Getting Results." + "tempFileName:" + tempFileName + ".projectName:" + projectName + ".dateFrom:" + dateFrom.Date.ToString() + ".dateTo:" + dateTo.Date.ToString());
+
+            return resultItem;
+        }
         private ExecutionType getExecutionType()
         {
             if (rb_DateRange.Checked)
@@ -834,7 +672,6 @@ namespace ZartisLogs
                 limit = startDate;
             }
 
-            var dateTimeFormat = CultureInfo.CurrentCulture.DateTimeFormat;
             while (iterator <= limit)
             {
                 yield return (
@@ -890,45 +727,45 @@ namespace ZartisLogs
 
         private void updateAppSettings()
         {
-            AppSettingsModel.UserName = txt_UserName.Text;
+            _appSettingsModel.UserName = txt_UserName.Text;
 
             if (rb_DateRange.Checked)
-                AppSettingsModel.Step1DateSelectionType = 1;
+                _appSettingsModel.Step1DateSelectionType = 1;
             else if (rb_SingleMonth.Checked)
-                AppSettingsModel.Step1DateSelectionType = 2;
+                _appSettingsModel.Step1DateSelectionType = 2;
             else if (rb_DateUpToNow.Checked)
-                AppSettingsModel.Step1DateSelectionType = 3;
+                _appSettingsModel.Step1DateSelectionType = 3;
 
-            AppSettingsModel.LastDateFromUsed = dtpDateFrom.Value;
-            AppSettingsModel.LastDateToUsed = dtpDateTo.Value;
+            _appSettingsModel.LastDateFromUsed = dtpDateFrom.Value;
+            _appSettingsModel.LastDateToUsed = dtpDateTo.Value;
 
-            AppSettingsModel.ProjectFolderPath = fbdSearchProjectFilePath.SelectedPath;
+            _appSettingsModel.ProjectFolderPath = fbdSearchProjectFilePath.SelectedPath;
 
-            if (AppSettingsModel.ProjectFilePaths == null)
-                AppSettingsModel.ProjectFilePaths = new List<ProjectFilePath>().ToArray();
+            if (_appSettingsModel.ProjectFilePaths == null)
+                _appSettingsModel.ProjectFilePaths = new List<ProjectFilePath>().ToArray();
 
-            AppSettingsModel.ProjectFilePaths = lbAddedProjectFilePaths.Items
+            _appSettingsModel.ProjectFilePaths = lbAddedProjectFilePaths.Items
                 .Cast<(string parentPath, string projectPath, string projectName)>()
                 .Select(x => new ProjectFilePath() { projectPath = x.projectPath, parentPath = x.parentPath, projectName = x.projectName })
                 .ToArray();
 
             if (rb_SingleFileByProject.Checked)
-                AppSettingsModel.Step5GroupByType = 1;
+                _appSettingsModel.Step5GroupByType = 1;
             else if (rb_SingleFileByMonthAndYear.Checked)
-                AppSettingsModel.Step5GroupByType = 2;
+                _appSettingsModel.Step5GroupByType = 2;
             else if (rb_GroupByProjectAndMonth.Checked)
-                AppSettingsModel.Step5GroupByType = 3;
+                _appSettingsModel.Step5GroupByType = 3;
 
-            AppSettingsModel.Step6FileNamePattern = txtFileNamePattern.Text;
-            AppSettingsModel.PrettierFormat = cbo_PrettierFormat.SelectedItem.ToString();
+            _appSettingsModel.Step6FileNamePattern = txtFileNamePattern.Text;
+            _appSettingsModel.PrettierFormat = cbo_PrettierFormat.SelectedItem.ToString();
 
-            AppSettingsModel.TryToUpload = chkTryToUpload.Checked;
-            AppSettingsModel.DriveFolderName = txt_DriveFolderName.Text;
+            _appSettingsModel.TryToUpload = chkTryToUpload.Checked;
+            _appSettingsModel.DriveFolderName = txt_DriveFolderName.Text;
 
-            AppSettingsModel.SaveFilePath = fbdGenerateBeautifulFile.SelectedPath;
+            _appSettingsModel.SaveFilePath = fbdGenerateBeautifulFile.SelectedPath;
 
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "appSettings.json");
-            var output = Newtonsoft.Json.JsonConvert.SerializeObject(AppSettingsModel, Newtonsoft.Json.Formatting.Indented);
+            var output = Newtonsoft.Json.JsonConvert.SerializeObject(_appSettingsModel, Newtonsoft.Json.Formatting.Indented);
             File.WriteAllText(filePath, output);
         }
     }

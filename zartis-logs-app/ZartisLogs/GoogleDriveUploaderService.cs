@@ -3,7 +3,6 @@ using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Upload;
 using Google.Apis.Util.Store;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,28 +13,26 @@ namespace ZartisLogs
 {
     public class GoogleDriveUploaderService
     {
-        DriveService driveService;
+        private DriveService driveService;
+        private readonly AppSettingsModel _appSettingsModel;
 
-        public GoogleDriveUploaderService()
+        public GoogleDriveUploaderService(AppSettingsModel appSettingsModel)
         {
+            _appSettingsModel = appSettingsModel;
+
             setDriveServiceAsync().GetAwaiter().GetResult();
         }
 
         async Task setDriveServiceAsync()
-        {
-            UserCredential credential;
+        {                    
+            string credPath = "token.json";
 
-            using (var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
-            {
-                string credPath = "token.json";
-
-                credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    (await GoogleClientSecrets.FromStreamAsync(stream)).Secrets,
-                    new string[] { DriveService.Scope.Drive },
-                    "ZartisLogs",
-                    CancellationToken.None,
-                    new FileDataStore(credPath, true));
-            }
+            var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                new ClientSecrets() { ClientId = _appSettingsModel.installed.client_id, ClientSecret = _appSettingsModel.installed.client_secret },
+                new string[] { DriveService.Scope.Drive },
+                "ZartisLogs",
+                CancellationToken.None,
+                new FileDataStore(credPath, true));
 
             driveService = new DriveService(new BaseClientService.Initializer()
             {

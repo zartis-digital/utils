@@ -362,7 +362,7 @@ namespace ZartisLogs
             this.bgw_AddedProjectFilePaths.WorkerReportsProgress = true;
             this.bgw_AddedProjectFilePaths.WorkerSupportsCancellation = true;
             this.bgw_AddedProjectFilePaths.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgw_AddedProjectFilePaths_DoWork);
-            this.bgw_AddedProjectFilePaths.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_AddedProjectFilePaths_ProgressChanged);
+            this.bgw_AddedProjectFilePaths.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_ProgressChanged);
             this.bgw_AddedProjectFilePaths.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.bgw_AddedProjectFilePaths_RunWorkerCompleted);
             // 
             // gb_FileGenerationSettings
@@ -529,7 +529,7 @@ namespace ZartisLogs
             this.bgw_RunGitCommand.WorkerReportsProgress = true;
             this.bgw_RunGitCommand.WorkerSupportsCancellation = true;
             this.bgw_RunGitCommand.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgw_RunGitCommand_DoWork);
-            this.bgw_RunGitCommand.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_RunGitCommand_ProgressChanged);
+            this.bgw_RunGitCommand.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_ProgressChanged);
             this.bgw_RunGitCommand.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.bgw_RunGitCommand_RunWorkerCompleted);
             // 
             // bgw_BuildOutputFile
@@ -537,7 +537,7 @@ namespace ZartisLogs
             this.bgw_BuildOutputFile.WorkerReportsProgress = true;
             this.bgw_BuildOutputFile.WorkerSupportsCancellation = true;
             this.bgw_BuildOutputFile.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgw_BuildOutputFile_DoWork);
-            this.bgw_BuildOutputFile.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_BuildOutputFile_ProgressChanged);
+            this.bgw_BuildOutputFile.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_ProgressChanged);
             this.bgw_BuildOutputFile.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.bgw_BuildOutputFile_RunWorkerCompleted);
             // 
             // bgw_UploadToDrive
@@ -545,7 +545,7 @@ namespace ZartisLogs
             this.bgw_UploadToDrive.WorkerReportsProgress = true;
             this.bgw_UploadToDrive.WorkerSupportsCancellation = true;
             this.bgw_UploadToDrive.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgw_UploadToDrive_DoWork);
-            this.bgw_UploadToDrive.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_UploadToDrive_ProgressChanged);
+            this.bgw_UploadToDrive.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.bgw_ProgressChanged);
             this.bgw_UploadToDrive.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.bgw_UploadToDrive_RunWorkerCompleted);
             // 
             // Main

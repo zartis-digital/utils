@@ -26,7 +26,7 @@ namespace ZartisLogs
         private void Main_Load(object sender, EventArgs e)
         {
             try
-            {                
+            {
                 setInitialValues();
                 setLatestsValues();
             }
@@ -357,7 +357,7 @@ namespace ZartisLogs
             bgw_UploadToDrive.ReportProgress(0);
 
             bgw_UploadToDrive.ReportProgress(1, "bgw_UploadToDrive - Parsing Argument");
-            var bgw_UploadToDrive_Argument = ((List<(string filePath, string fileName)>, string driveFolderName))e.Argument;       
+            var bgw_UploadToDrive_Argument = ((List<(string filePath, string fileName)>, string driveFolderName))e.Argument;
 
             bgw_UploadToDrive.ReportProgress(2, "Uploading Files...");
             foreach (var (filePath, fileName) in bgw_UploadToDrive_Argument.Item1)
@@ -447,10 +447,15 @@ namespace ZartisLogs
             if (!string.IsNullOrEmpty(_appSettingsModel.Step6FileNamePattern))
                 txtFileNamePattern.Text = _appSettingsModel.Step6FileNamePattern;
 
-            chkTryToUpload.Checked = _appSettingsModel.TryToUpload;
+            if (_appSettingsModel.installed != null && !string.IsNullOrEmpty(_appSettingsModel.installed.client_id) && !string.IsNullOrEmpty(_appSettingsModel.installed.client_secret) && _appSettingsModel.TryToUpload)
+            {
+                chkTryToUpload.Checked = _appSettingsModel.TryToUpload;
 
-            if (!string.IsNullOrEmpty(_appSettingsModel.DriveFolderName))
-                txt_DriveFolderName.Text = _appSettingsModel.DriveFolderName;
+                if (!string.IsNullOrEmpty(_appSettingsModel.DriveFolderName) && _appSettingsModel.TryToUpload)
+                    txt_DriveFolderName.Text = _appSettingsModel.DriveFolderName;
+            }
+            else
+                chkTryToUpload.Enabled = false;
 
             if (!string.IsNullOrEmpty(_appSettingsModel.SaveFilePath) && Directory.Exists(_appSettingsModel.SaveFilePath))
                 fbdGenerateBeautifulFile.SelectedPath = _appSettingsModel.SaveFilePath;

@@ -20,11 +20,12 @@ namespace ZartisLogs
         {
             _appSettingsModel = appSettingsModel;
 
-            setDriveServiceAsync().GetAwaiter().GetResult();
+            if (_appSettingsModel.installed != null && !string.IsNullOrEmpty(_appSettingsModel.installed.client_id) && !string.IsNullOrEmpty(_appSettingsModel.installed.client_secret))
+                setDriveServiceAsync().GetAwaiter().GetResult();
         }
 
         async Task setDriveServiceAsync()
-        {                    
+        {
             string credPath = "token.json";
 
             var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(

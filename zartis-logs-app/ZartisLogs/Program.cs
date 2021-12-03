@@ -36,11 +36,21 @@ namespace ZartisLogs
 
         private static void ConfigureServices(ServiceCollection services)
         {
-            var builder = new ConfigurationBuilder()
+
+            IConfigurationBuilder builder;
+#if DEBUG
+            builder = new ConfigurationBuilder()
                                                 .SetBasePath(Directory.GetCurrentDirectory())
                                                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                                                 .AddUserSecrets("0902cec2-7a5c-415f-8178-e7e2470b035b")
                                                 .AddEnvironmentVariables();
+#else
+      builder = new ConfigurationBuilder()
+                                                .SetBasePath(Directory.GetCurrentDirectory())
+                                                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)                                                
+                                                .AddEnvironmentVariables();
+#endif
+
             Configuration = builder.Build();
 
             AppSettingsModel appSettingsModel = new();

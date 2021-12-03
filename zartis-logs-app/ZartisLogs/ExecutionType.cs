@@ -11,5 +11,5 @@
         rb_DateUpToNow_rb_SingleFileByProject,
         rb_DateUpToNow_rb_SingleFileByMonthAndYear,
         rb_DateUpToNow_rb_GroupByProjectAndMonth
-    }
+    }   
 }

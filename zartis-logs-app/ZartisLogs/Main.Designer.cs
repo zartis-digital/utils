@@ -29,6 +29,7 @@ namespace ZartisLogs
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
             this.txt_UserName = new System.Windows.Forms.TextBox();
             this.gb_DateSettings = new System.Windows.Forms.GroupBox();
             this.gb_Step2DateSet = new System.Windows.Forms.GroupBox();
@@ -561,9 +562,11 @@ namespace ZartisLogs
             this.Controls.Add(this.lbl_UserName);
             this.Controls.Add(this.gb_DateSettings);
             this.Controls.Add(this.txt_UserName);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "Main";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Main";
+            this.Text = "Zartis Log Builder";
             this.Load += new System.EventHandler(this.Main_Load);
             this.gb_DateSettings.ResumeLayout(false);
             this.gb_Step2DateSet.ResumeLayout(false);

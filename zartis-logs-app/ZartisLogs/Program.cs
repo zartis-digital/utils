@@ -39,8 +39,8 @@ namespace ZartisLogs
             var builder = new ConfigurationBuilder()
                                                 .SetBasePath(Directory.GetCurrentDirectory())
                                                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                                               .AddUserSecrets("0902cec2-7a5c-415f-8178-e7e2470b035b")                                               
-                                               .AddEnvironmentVariables();
+                                                .AddUserSecrets("0902cec2-7a5c-415f-8178-e7e2470b035b")
+                                                .AddEnvironmentVariables();
             Configuration = builder.Build();
 
             AppSettingsModel appSettingsModel = new();
@@ -49,12 +49,17 @@ namespace ZartisLogs
             {
                 Configuration.Bind(appSettingsModel);
 
+                if (appSettingsModel.LastDateFromUsed == DateTime.MinValue && appSettingsModel.LastDateToUsed == DateTime.MinValue)
+                    throw new InvalidCastException("Default Config should be Loaded");
+
                 if (appSettingsModel.ProjectFilePaths != null)
                     appSettingsModel.ProjectFilePaths.ToList().RemoveAll(x => !Directory.Exists(x.projectPath) || string.IsNullOrEmpty(x.projectPath));
 
                 services
                     .AddSingleton(appSettingsModel)
                     .AddScoped<GoogleDriveUploaderService>()
+                    .AddScoped<FileManagerService>()
+                    .AddScoped<GitService>()
                     .AddScoped<Main>();
 
             }

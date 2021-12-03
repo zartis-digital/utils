@@ -14,11 +14,15 @@ namespace ZartisLogs
     public partial class Main : Form
     {
         private readonly GoogleDriveUploaderService _googleDriveUploaderService;
+        private readonly FileManagerService _fileManagerService;
+        private readonly GitService _gitService;
         private AppSettingsModel _appSettingsModel;
 
-        public Main(GoogleDriveUploaderService googleDriveUploaderService, AppSettingsModel appSettingsModel)
+        public Main(GoogleDriveUploaderService googleDriveUploaderService, AppSettingsModel appSettingsModel, FileManagerService fileManagerService, GitService gitService)
         {
             _googleDriveUploaderService = googleDriveUploaderService;
+            _fileManagerService = fileManagerService;
+            _gitService = gitService;
             _appSettingsModel = appSettingsModel;
             InitializeComponent();
         }
@@ -87,16 +91,16 @@ namespace ZartisLogs
             var (listOfAvailableProjectFilePaths, projectFilePath) = ((List<(string parentPath, string projectPath, string projectName)> listOfAvailableProjectFilePaths, string projectFilePath))e.Argument;
 
             bgw_AddedProjectFilePaths.ReportProgress(2, "Searching folders with *.SLN extension");
-            var _getProjectsByExtensionsAsync = getProjectsByExtensions(listOfAvailableProjectFilePaths, projectFilePath, "*.sln");
+            var _getProjectsByExtensions = _fileManagerService.GetProjectsByExtensions(listOfAvailableProjectFilePaths, projectFilePath, "*.sln");
 
             bgw_AddedProjectFilePaths.ReportProgress(3, "Searching folders with *.SLN extension Job Done");
-            listOfAvailableProjectFilePaths.AddRange(_getProjectsByExtensionsAsync);
+            listOfAvailableProjectFilePaths.AddRange(_getProjectsByExtensions);
 
             bgw_AddedProjectFilePaths.ReportProgress(4, "Searching folders with *.gitignore extension");
-            var __getProjectsByExtensionsAsync = getProjectsByExtensions(listOfAvailableProjectFilePaths, projectFilePath, "*.gitignore");
+            var __getProjectsByExtensions = _fileManagerService.GetProjectsByExtensions(listOfAvailableProjectFilePaths, projectFilePath, "*.gitignore");
 
             bgw_AddedProjectFilePaths.ReportProgress(5, "Searching folders with *.gitignore extension Job Done");
-            listOfAvailableProjectFilePaths.AddRange(__getProjectsByExtensionsAsync);
+            listOfAvailableProjectFilePaths.AddRange(__getProjectsByExtensions);
 
             bgw_AddedProjectFilePaths.ReportProgress(100);
             e.Result = listOfAvailableProjectFilePaths;
@@ -257,7 +261,7 @@ namespace ZartisLogs
                         var _item = bgw_BuildOutputFile_Argument.Item1.Where(x => x.projectName == item.Key);
 
                         bgw_BuildOutputFile.ReportProgress(2, "Building Output file Name");
-                        var _outputFileName = buildOutputFileName(
+                        var _outputFileName = _fileManagerService.BuildOutputFileName(
                                     bgw_BuildOutputFile_Argument.fileNamePattern,
                                     bgw_BuildOutputFile_Argument.userName,
                                     bgw_BuildOutputFile_Argument.saveSelectedPath,
@@ -266,7 +270,7 @@ namespace ZartisLogs
                                     item.Key);
 
                         bgw_BuildOutputFile.ReportProgress(3, "Writting final file");
-                        buildOutputFile(_item.Select(x => x.tempFileName),
+                        _fileManagerService.BuildOutputFile(_item.Select(x => x.tempFileName),
                             _outputFileName.filePath);
 
                         result.Add(_outputFileName);
@@ -281,7 +285,7 @@ namespace ZartisLogs
                         var _item = bgw_BuildOutputFile_Argument.Item1.Where(x => x.dateTo == item.Key);
 
                         bgw_BuildOutputFile.ReportProgress(2, "Building Output file Name");
-                        var _outputFileName = buildOutputFileName(
+                        var _outputFileName = _fileManagerService.BuildOutputFileName(
                                     bgw_BuildOutputFile_Argument.fileNamePattern,
                                     bgw_BuildOutputFile_Argument.userName,
                                     bgw_BuildOutputFile_Argument.saveSelectedPath,
@@ -289,7 +293,7 @@ namespace ZartisLogs
                                     item.Key.Year);
 
                         bgw_BuildOutputFile.ReportProgress(3, "Writting final file");
-                        buildOutputFile(_item.Select(x => x.tempFileName),
+                        _fileManagerService.BuildOutputFile(_item.Select(x => x.tempFileName),
                             _outputFileName.filePath);
 
                         result.Add(_outputFileName);
@@ -304,7 +308,7 @@ namespace ZartisLogs
                             var (tempFileName, projectName, dateFrom, dateTo) = bgw_BuildOutputFile_Argument.Item1.SingleOrDefault(x => x.projectName == _item.Key && x.dateTo == item.Key);
 
                             bgw_BuildOutputFile.ReportProgress(2, "Building Output file Name");
-                            var _outputFileName = buildOutputFileName(
+                            var _outputFileName = _fileManagerService.BuildOutputFileName(
                                     bgw_BuildOutputFile_Argument.fileNamePattern,
                                     bgw_BuildOutputFile_Argument.userName,
                                     bgw_BuildOutputFile_Argument.saveSelectedPath,
@@ -313,7 +317,7 @@ namespace ZartisLogs
                                     _item.Key);
 
                             bgw_BuildOutputFile.ReportProgress(3, "Writting final file");
-                            buildOutputFile(
+                            _fileManagerService.BuildOutputFile(
                                 new List<string> { tempFileName },
                                _outputFileName.filePath);
 
@@ -505,34 +509,7 @@ namespace ZartisLogs
             catch (Exception ex) { MessageBox.Show(ex.Message); }
         }
 
-        private IEnumerable<(string parentPath, string projectPath, string projectName)> getProjectsByExtensions(IEnumerable<(string parentPath, string projectPath, string projectName)> existingLBAddedProjectFilePaths, string projectsFilePath, string extension)
-        {
-            var availableProjectsPaths = Directory.GetFiles(projectsFilePath, extension, SearchOption.AllDirectories);
 
-            var results = new List<(string parentPath, string projectPath, string projectName)>();
-
-            var formattedExtensions = extension.Replace("*", "").Replace(".", "");
-
-            foreach (var availableProjectsPath in availableProjectsPaths)
-            {
-                var _parentPath = Directory.GetParent(availableProjectsPath).FullName;
-                string _projectPath = string.Empty;
-
-                if (availableProjectsPath.Contains(formattedExtensions))
-                    _projectPath = new DirectoryInfo(availableProjectsPath).Parent.FullName;
-                else
-                    _projectPath = availableProjectsPath;
-
-                var _projectName = new DirectoryInfo(availableProjectsPath).Name.Contains(formattedExtensions) ?
-                    Directory.GetParent(availableProjectsPath).Name :
-                    new DirectoryInfo(availableProjectsPath).Name;
-
-                if (!existingLBAddedProjectFilePaths.Any(y => y.projectPath == _projectPath))
-                    results.Add(new(_parentPath, _projectPath, _projectName));
-            }
-
-            return results;
-        }
 
         private void asyncTaskIsRunning(bool asyncTaskIsRunning)
         {
@@ -590,22 +567,6 @@ namespace ZartisLogs
                 throw new ArgumentNullException("Step - 6* - Drive Root Folder Name: cannot be null");
         }
 
-        private (string gitCommand, string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo) buildGitCommand(DateTime dateFrom, DateTime dateTo, string userName, string projectName, string prettierFormat)
-        {
-            var tempFileName = Path.GetTempPath() + Guid.NewGuid().ToString() + ".txt";
-
-            var formattedDayDateFrom = dateFrom.Day < 10 ? "0" + dateFrom.Day.ToString() : dateFrom.Day.ToString();
-            var formattedDayDateTo = dateTo.Day < 10 ? "0" + dateTo.Day.ToString() : dateTo.Day.ToString();
-
-            var formattedMonthDateFrom = dateFrom.Month < 10 ? "0" + dateFrom.Month.ToString() : dateFrom.Month.ToString();
-            var formattedMonthDateTo = dateTo.Month < 10 ? "0" + dateTo.Month.ToString() : dateTo.Month.ToString();
-            var _prettierFormat = string.IsNullOrEmpty(prettierFormat) ? "email" : prettierFormat;
-
-            var gitCommand = $@"git log --author='{userName}*' --pretty={_prettierFormat} --since='{dateFrom.Year}-{formattedMonthDateFrom}-{formattedDayDateFrom}' --until='{dateTo.Year}-{formattedMonthDateTo}-{formattedDayDateTo}' > {tempFileName}";
-
-            return (gitCommand, tempFileName, projectName, dateFrom, dateTo);
-        }
-
         private (string tempFileName, string projectName, DateTime dateFrom, DateTime dateTo) _bgw_RunGitCommand_DoWork(BackgroundWorker _bgw_RunGitCommand, string projectPath, DateTime dateFrom, DateTime dateTo, string username, string projectName, string prettierFormat)
         {
             _bgw_RunGitCommand.ReportProgress(3, "Creating PS Console");
@@ -615,7 +576,7 @@ namespace ZartisLogs
             powershell.AddScript($"cd {projectPath}");
 
             _bgw_RunGitCommand.ReportProgress(5, "Building Git Command");
-            var (gitCommand, tempFileName, _projectName, _dateFrom, _dateTo) = buildGitCommand(dateFrom, dateTo, username, projectName, prettierFormat);
+            var (gitCommand, tempFileName, _projectName, _dateFrom, _dateTo) = _gitService.BuildGitCommand(dateFrom, dateTo, username, projectName, prettierFormat);
 
             _bgw_RunGitCommand.ReportProgress(6, $"Adding Script to PS Console. Git Command:{ gitCommand}");
             powershell.AddScript(gitCommand);
@@ -628,6 +589,7 @@ namespace ZartisLogs
 
             return resultItem;
         }
+
         private ExecutionType getExecutionType()
         {
             if (rb_DateRange.Checked)
@@ -686,48 +648,6 @@ namespace ZartisLogs
 
                 iterator = iterator.AddMonths(1);
             }
-        }
-
-        private string buildOutputFile(IEnumerable<string> tempFilePaths, string outputFileName)
-        {
-            var outputStringBuilder = new StringBuilder();
-
-            foreach (var tempFilePath in tempFilePaths)
-            {
-                if (!File.Exists(tempFilePath))
-                    continue;
-
-                using var sr = new StreamReader(tempFilePath);
-                outputStringBuilder.Append(sr.ReadToEnd());
-            }
-
-            File.WriteAllText(outputFileName, outputStringBuilder.ToString());
-
-            foreach (var tempFilePath in tempFilePaths)
-            {
-                if (!File.Exists(tempFilePath))
-                    continue;
-
-                File.Delete(tempFilePath);
-            }
-
-            return outputFileName;
-        }
-
-        private (string filePath, string fileName) buildOutputFileName(string fileNamePattern, string userName, string saveSelectedPath, int month = int.MinValue, int year = int.MinValue, string projectName = null)
-        {
-            string outputFileName = fileNamePattern;
-
-            if (outputFileName.Contains("{UserName}"))
-                outputFileName = outputFileName.Replace("{UserName}", userName);
-
-            if (outputFileName.Contains("{Month}_{Year}") && month != int.MinValue && year != int.MinValue)
-                outputFileName = outputFileName.Replace("{Month}_{Year}", $"{month}_{year}");
-
-            if (outputFileName.Contains("{ProjectName}") && projectName != null)
-                outputFileName = outputFileName.Replace("{ProjectName}", projectName);
-
-            return (saveSelectedPath + "\\" + outputFileName, outputFileName);
         }
 
         private void updateAppSettings()

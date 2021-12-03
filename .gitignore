@@ -6,3 +6,4 @@
 /.vs
 /zartis-logs-app/.vs/ZartisLogs
 /zartis-logs-app/ZartisLogs/bin/Debug/net5.0-windows
+/zartis-logs-app/ZartisLogs/bin/Release/net5.0-windows

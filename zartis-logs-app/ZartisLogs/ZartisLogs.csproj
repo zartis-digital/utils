@@ -6,6 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UserSecretsId>0902cec2-7a5c-415f-8178-e7e2470b035b</UserSecretsId>
+    <ApplicationIcon>Logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

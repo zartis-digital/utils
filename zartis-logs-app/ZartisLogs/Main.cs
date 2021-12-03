@@ -451,7 +451,7 @@ namespace ZartisLogs
             if (!string.IsNullOrEmpty(_appSettingsModel.Step6FileNamePattern))
                 txtFileNamePattern.Text = _appSettingsModel.Step6FileNamePattern;
 
-            if (_appSettingsModel.installed != null && !string.IsNullOrEmpty(_appSettingsModel.installed.client_id) && !string.IsNullOrEmpty(_appSettingsModel.installed.client_secret) && _appSettingsModel.TryToUpload)
+            if (_appSettingsModel.installed != null && !string.IsNullOrEmpty(_appSettingsModel.installed.client_id) && !string.IsNullOrEmpty(_appSettingsModel.installed.client_secret))
             {
                 chkTryToUpload.Checked = _appSettingsModel.TryToUpload;
 

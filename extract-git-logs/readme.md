@@ -5,6 +5,7 @@
 3. Run `run-extract-logs.local.ps1`
 
    > out of windows, you probally need to run `pwsh` first
+   > in windows, please ensure that `allProjectsFolder` ends with a `\` at the end
 
 4. Logs will be saved on the `temp` folder, organized in folders by year/date
 

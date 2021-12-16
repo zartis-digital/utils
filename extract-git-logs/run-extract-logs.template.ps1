@@ -8,7 +8,8 @@ $fnParams = @{
     #targetYear        = "" # define target year( app will promt u otherwise )
     #nestedFolders     = 2 # define how many nested folder level the script should analysis ( app will use "4" as default )
     allProjectsFolder = "" # put the full path of the folder where your working git repos live in
-    # for instace: "C:\Users\[user]\Documents\vscode"
+    # for instace: "C:\Users\[user]\Documents\vscode\"
+    ## -> in windows, please ensure that `allProjectsFolder` ends with a `\` at the end
     # or: "/home/[user]/vscode"
     debuginfo         = $false # wheter to print or not extra info
 }

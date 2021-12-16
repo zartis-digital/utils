@@ -87,7 +87,7 @@ try {
     $gitRepos = Get-ChildItem -recurse -Directory -Path $allProjectsFolder -Force -depth $nestedFolders -ErrorAction stop | Where-Object { $_.name -eq ".git" }
     write-host "Extracting logs.." -ForegroundColor DarkYellow -NoNewline
     foreach ($gitrepo in $gitRepos) {
-        $gitrepoFolderPath = Join-Path -Path $allProjectsFolder -childPath $gitrepo.Parent
+        $gitrepoFolderPath = $gitrepo.Parent 
         $gitrepoName = $(get-item -path $gitrepoFolderPath ).name
         Set-Location -Path $gitrepoFolderPath -ErrorAction Stop > $null
         $gitlogfilename = "{0}-{1}.csv" -f $gitrepoName, $($gitAuthor -replace " ", "")

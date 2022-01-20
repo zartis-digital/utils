@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ZartisLogs
+﻿namespace ZartisLogs
 {
     public class AppSettingsModel
     {

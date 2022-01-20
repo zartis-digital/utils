@@ -1,13 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Data;
-using System.IO;
-using System.Linq;
 using System.Management.Automation;
-using System.Text;
-using System.Windows.Forms;
 
 namespace ZartisLogs
 {
@@ -130,11 +123,16 @@ namespace ZartisLogs
 
                 foreach (var (parentPath, projectPath, projectName) in bgw_AddedProjectFilePaths_DoWork_Result)
                     lbAddedProjectFilePaths.Items.Add((parentPath, projectPath, projectName));
-
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+            finally
+            {
+                if (e.Error != null && e.Error.GetType() == typeof(UnauthorizedAccessException))
+                    MessageBox.Show("bgw_AddedProjectFilePaths - Please use the app with higher access permission, maybe run as administrator can be an option.");
                 if (e.Error != null)
                     MessageBox.Show("bgw_AddedProjectFilePaths - " + e.Error.Message);
+                asyncTaskIsRunning(false);
             }
-            finally { asyncTaskIsRunning(false); }
         }
 
         private void btnRemoveSelected_Click(object sender, EventArgs e)
@@ -235,10 +233,9 @@ namespace ZartisLogs
             finally
             {
                 if (e.Error != null)
-                {
                     MessageBox.Show("bgw_AddedProjectFilePaths - " + e.Error.Message);
-                    asyncTaskIsRunning(false);
-                }
+
+                asyncTaskIsRunning(false);
             }
         }
 
@@ -343,16 +340,12 @@ namespace ZartisLogs
             finally
             {
                 if (!chkTryToUpload.Checked)
-                {
                     updateAppSettings();
-                    asyncTaskIsRunning(false);
-                }
 
                 if (e.Error != null)
-                {
                     MessageBox.Show("bgw_BuildOutputFile - " + e.Error.Message);
-                    asyncTaskIsRunning(false);
-                }
+
+                asyncTaskIsRunning(false);
             }
         }
 
@@ -508,8 +501,6 @@ namespace ZartisLogs
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
         }
-
-
 
         private void asyncTaskIsRunning(bool asyncTaskIsRunning)
         {
@@ -682,7 +673,9 @@ namespace ZartisLogs
                 _appSettingsModel.Step5GroupByType = 3;
 
             _appSettingsModel.Step6FileNamePattern = txtFileNamePattern.Text;
-            _appSettingsModel.PrettierFormat = cbo_PrettierFormat.SelectedItem.ToString();
+
+            if (cbo_PrettierFormat.SelectedItem != null)
+                _appSettingsModel.PrettierFormat = cbo_PrettierFormat.SelectedItem.ToString();
 
             _appSettingsModel.TryToUpload = chkTryToUpload.Checked;
             _appSettingsModel.DriveFolderName = txt_DriveFolderName.Text;
